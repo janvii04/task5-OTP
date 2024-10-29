@@ -1,87 +1,50 @@
-const express = require('express')
-const app = express()
-
+const twilio = require('twilio');
 const otpManager = require("node-twillo-otp-manager")(
     process.env.TWILIO_ACCOUNT_SID,
     process.env.TWILIO_AUTH_TOKEN,
     process.env.TWILIO_SERVICE_SID
-  );
-  
-  app.use(express.json());
-  
-  app.post("/test", async (req, res) => {
+);
+
+const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
+// Send OTP
+const sendOTP = async (phone) => {
     try {
-      const serviceSid = await otpManager.createServiceSID("appCleaning", "4");
-  
-      console.log("serviceSid:", serviceSid);
-  
-      res.json({ success: true, message: "Service SID created", serviceSid });
+        return await otpManager.sendOTP(phone);
     } catch (error) {
-      console.log(error);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Failed to create Service SID",
-          error: error.message,
-        });
+        throw new Error("Invalid phone number: " + error.message);
     }
-  });
-  
-  // Send OTP
-  app.post("/send", async (req, res) => {
+};
+
+// Verify OTP
+const verifyOTP = async (mobileNumber, otp) => {
     try {
-      const { countryCode, mobile } = req.body; 
-      const phone = countryCode + mobile; 
-      console.log("Sending OTP to:", phone); 
-      try {
-        var resp = await otpManager.sendOTP(phone);
-      } catch (error) {
-        res
-          .status(500)
-          .json({
-            success: false,
-            message: "Number is not valid",
-            error: error.message,
-          });
-      }
-      res.json({ success: true, message: "OTP sent", data: resp });
+        return await otpManager.verifyOTP(mobileNumber, otp);
     } catch (error) {
-      console.log(error);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Failed to send OTP",
-          error: error.message,
-        });
+        throw new Error("Failed to verify OTP: " + error.message);
     }
-  });
-  
-  // Verify OTP
-  app.post("/verify", async (req, res) => {
+};
+
+// Send SMS using Twilio
+const sendSMS = async (to, body) => {
+    const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+    if (!fromNumber) {
+        throw new Error("TWILIO_PHONE_NUMBER is not set");
+    }
+
     try {
-      const { mobileNumber, otp } = req.body; 
-  
-      
-      const isMobileExist = { dataValues: { countryCode: "+" } }; 
-      const formattedMobileNumber =
-        isMobileExist.dataValues.countryCode === null
-          ? "+" + mobileNumber
-          : isMobileExist.dataValues.countryCode + mobileNumber;
-  
-      const resp = await otpManager.verifyOTP(formattedMobileNumber, otp);
-  
-      res.json({ success: true, message: "OTP verified", data: resp });
-    } catch (error) {
-      console.log(error);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Failed to verify OTP",
-          error: error.message,
+        return await client.messages.create({
+            body,
+            from: fromNumber,
+            to,
         });
+    } catch (error) {
+        throw new Error("Failed to send SMS: " + error.message);
     }
-  });
-  
+};
+
+module.exports = {
+    sendOTP,
+    verifyOTP,
+    sendSMS,
+};

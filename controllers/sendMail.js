@@ -1,5 +1,5 @@
 const nodemailer = require("nodemailer");
-const sendMail = async (req, res) => {
+const sendMail = async (name,phonNumber,email) => {
 //   let testAccount = await nodemailer.createTestAccount();
 
   //connect with the smtp
@@ -13,14 +13,13 @@ const sendMail = async (req, res) => {
   });
   let info = await transporter.sendMail({
     from: '"Jeevan" <jeevanbala@cqlsys.co.uk>', 
-    to: "mitaligoura2004@gmail.com",
+    to: email,
     subject: "Hello ✔", 
-    text: "Welcome welcome", 
-    html: "<b>Hello world?</b>", 
+    text: " welcome ", 
+    html: `welcome ${name} you are register with us this ${phonNumber} phoneNumber</b>`, 
   });
 
   console.log("Message sent: %s", info.messageId);
-
-  res.json(info);
+return true
 };
 module.exports = {sendMail: sendMail};
